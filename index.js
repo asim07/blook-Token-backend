@@ -15,7 +15,15 @@ const connection = new Connection(
 //token address
 const mint = new PublicKey("23PfyriUFSzgvuFNu4N6ZVZuWxcpmP6xgsQisLx5M7T2");
 const tokenAccount = new PublicKey("7afY39hBCH3tMbea7wrPjzWeYiLQRb2JuBSD9NqKeZe2");
-const recieverAccount = new PublicKey("C18Ge5g6oeCZHJEJ1VL6AoKhZQpVV5CE8scVELTyqZxt")
+
+//wallet addresses
+const recieverAccount = new PublicKey("C18Ge5g6oeCZHJEJ1VL6AoKhZQpVV5CE8scVELTyqZxt");
+const devteamAddress = new PublicKey("rfiRWnfrKsZRzpE8LybsTizS1jFLxFAb5sa69G3E7mB");
+const stakeholders = new PublicKey("HCZ2aQMXC5U1U5RF4Lj9CHcm9mx4k4cTq3Y61kfkhLUc");
+const charity = new PublicKey("BKtR1eFEvqAcKZEy1CPnFT1AqVrpkMVcFu45et5bnhVo");
+
+const addresses = {recieverAccount,devteamAddress,stakeholders,charity};
+
 //Create Token
 const CreateToken = async ()=> {
     const mint = await createMint(
@@ -63,19 +71,19 @@ const GetAccountInfo = async (connection,tokenAccount) => {
 }
 
 //mint_Tokens
-const mintTokens = async (connection, payer,mint,tokenAccount) => {
+const mintTokens = async (connection, payer,mint,tokenAccount,amount) => {
   await mintTo(
     connection,
     payer,
     mint,
     tokenAccount,
     payer.publicKey,
-    100e9
+    amount
   )
 }
 
 //send Tokens to Other address
-const transferTokens = async (connection,payer,tokenAccount,recieverAccount) => {
+const transferTokens = async (connection,payer,tokenAccount,recieverAccount,amount) => {
   const toTokenAccount = await getOrCreateAssociatedTokenAccount(connection, payer, mint,recieverAccount);
   signature = await transfer(
     connection,
@@ -83,14 +91,14 @@ const transferTokens = async (connection,payer,tokenAccount,recieverAccount) => 
     tokenAccount,
     toTokenAccount.address,
     payer.publicKey,
-    50e9,
+    amount,
 );
 }
 
 //mint and distribute to different people
 
 
-const BurnTokens = async (connection,payer,tokenAccount,mint,amount = 1e9) => {
+const BurnTokens = async (connection,payer,tokenAccount,mint,amount) => {
  result = await burn(connection,
   payer,
   tokenAccount,
@@ -100,9 +108,34 @@ const BurnTokens = async (connection,payer,tokenAccount,mint,amount = 1e9) => {
   console.log("result : ",result);
 }
 
+const mintAndTransfer  = async (connection,payer,mint,tokenAccount,amount,addresses) => {
+
+  console.log("inside function");
+  let mintTxt = await mintTokens(connection, payer,mint,tokenAccount,amount);
+  console.log(mintTxt);
+  amount = amount / 4;
+
+  // for(const address in addresses){
+    console.log("checking : ",typeof(address));
+   let txt = await transferTokens(connection,payer,tokenAccount,recieverAccount,amount);  
+    console.log("hash of Transactions : ",);
+     txt = await transferTokens(connection,payer,tokenAccount,charity,amount);  
+    console.log("hash of Transactions : ",);
+     txt = await transferTokens(connection,payer,tokenAccount,devteamAddress,amount);  
+    console.log("hash of Transactions : ",);
+     txt = await transferTokens(connection,payer,tokenAccount,stakeholders,amount);  
+    console.log("hash of Transactions : ",);
+  // }
+
+  
+}
+
+
 // CreateAssociatedAccount(connection,payer,mint);
 // console.log(tokenAccount.address);
 // GetAccountInfo(connection,tokenAccount);
 // mintTokens(connection, payer, mint , tokenAccount);
 // transferTokens(connection,payer,tokenAccount,recieverAccount);
 // BurnTokens(connection,payer,tokenAccount,mint,1e9);
+mintAndTransfer(connection,payer,mint,tokenAccount,1e9,addresses);
+// console.log(typeof(charity));
