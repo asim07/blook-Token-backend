@@ -1,34 +1,108 @@
-const solanaWeb3 = require("@solana/web3.js");
+const  { createMint , getMint ,getOrCreateAssociatedTokenAccount,getAccount,mintTo,transfer,burn} = require('@solana/spl-token');
+const { clusterApiUrl, Connection, Keypair, LAMPORTS_PER_SOL ,PublicKey} =  require('@solana/web3.js');
+const base58 = require('bs58');
 
-let secratekey = Uint8Array.from([
-  230, 243, 15, 141, 184, 119, 136, 31, 192, 143, 155, 222, 14, 210, 163, 50,
-  205, 200, 16, 106, 59, 221, 180, 3, 108, 194, 62, 255, 9, 161, 199, 87, 209,
-  165, 58, 40, 184, 46, 227, 105, 197, 253, 47, 161, 64, 33, 69, 103, 96, 75,
-  217, 252, 161, 125, 141, 113, 184, 152, 85, 159, 75, 147, 231, 115,
-]);
+const payer = Keypair.fromSecretKey(base58.decode("5cozvavrV7t9SyNnfbdsAVHJFHr9KUt6xgPzejMfLsXWqGY9DAH3Eh9qjVp847vfKw2MkiwYxnGzRKkw6yd8FcgJ"))
+const mintAuthority = payer
+const freezeAuthority = payer
 
-let keypair = solanaWeb3.Keypair.fromSecretKey(secratekey);
-// console.log(keypair);
-let fromKeypair = secratekey.publicKey;
-let toKeypair = "ECE3cn9feo365mBaZe5feseDWUjAACJu7ru9H27g29f2";
-let transaction = new solanaWeb3.Transaction();
+//connection with solana
+const connection = new Connection(
+  clusterApiUrl('testnet'),
+  'confirmed'
+);
 
-transaction.add(
-    solanaWeb3.SystemProgram.transfer({
-      fromPubkey: fromKeypair,
-      toPubkey: toKeypair,
-      lamports: solanaWeb3.LAMPORTS_PER_SOL
-    })
-  );
-  let connection = new solanaWeb3.Connection(solanaWeb3.clusterApiUrl('devnet'));
-
- const trans = async() => {
-    await solanaWeb3.sendAndConfirmTransaction(
+//token address
+const mint = new PublicKey("23PfyriUFSzgvuFNu4N6ZVZuWxcpmP6xgsQisLx5M7T2");
+const tokenAccount = new PublicKey("7afY39hBCH3tMbea7wrPjzWeYiLQRb2JuBSD9NqKeZe2");
+const recieverAccount = new PublicKey("C18Ge5g6oeCZHJEJ1VL6AoKhZQpVV5CE8scVELTyqZxt")
+//Create Token
+const CreateToken = async ()=> {
+    const mint = await createMint(
         connection,
-        transaction,
-        [keypair]
+        payer,
+        mintAuthority.publicKey,
+        freezeAuthority.publicKey,
+        9 // We are using 9 to match the CLI decimal default exactly
       );
-      console.log("it works");
+      console.log(mint.toBase58());      // CUA9XgyvtnhDWvjNEvGxZVFL34zH3etLWzSpj3QVhLHd
+}
+
+//get Token Supply
+const TokenSupply = async () => {
+    const mint = new PublicKey("23PfyriUFSzgvuFNu4N6ZVZuWxcpmP6xgsQisLx5M7T2");
+    // console.log("Mint result : ",mint)
+    const mintInfo = await getMint(
+        connection,
+        mint
+      )      
+      console.log(mintInfo.supply)
     
-  }
- trans();
+}
+
+//create Associated account
+const CreateAssociatedAccount = async (connection,payer,mint) => {
+    const tokenAccount = await getOrCreateAssociatedTokenAccount(
+        connection,
+        payer,
+        mint,
+        payer.publicKey
+      )
+      console.log(tokenAccount.mint.toBase58());
+      console.log(tokenAccount.owner.toBase58());
+      console.log(tokenAccount.address.toBase58());
+}
+//Get Account Info
+const GetAccountInfo = async (connection,tokenAccount) => {
+  const tokenAccountInfo = await getAccount(
+    connection,
+    tokenAccount
+  )
+  
+  console.log(tokenAccountInfo.amount);
+}
+
+//mint_Tokens
+const mintTokens = async (connection, payer,mint,tokenAccount) => {
+  await mintTo(
+    connection,
+    payer,
+    mint,
+    tokenAccount,
+    payer.publicKey,
+    100e9
+  )
+}
+
+//send Tokens to Other address
+const transferTokens = async (connection,payer,tokenAccount,recieverAccount) => {
+  const toTokenAccount = await getOrCreateAssociatedTokenAccount(connection, payer, mint,recieverAccount);
+  signature = await transfer(
+    connection,
+    payer,
+    tokenAccount,
+    toTokenAccount.address,
+    payer.publicKey,
+    50e9,
+);
+}
+
+//mint and distribute to different people
+
+
+const BurnTokens = async (connection,payer,tokenAccount,mint,amount = 1e9) => {
+ result = await burn(connection,
+  payer,
+  tokenAccount,
+  mint,
+  payer.publicKey,
+  amount)
+  console.log("result : ",result);
+}
+
+// CreateAssociatedAccount(connection,payer,mint);
+// console.log(tokenAccount.address);
+// GetAccountInfo(connection,tokenAccount);
+// mintTokens(connection, payer, mint , tokenAccount);
+// transferTokens(connection,payer,tokenAccount,recieverAccount);
+// BurnTokens(connection,payer,tokenAccount,mint,1e9);
